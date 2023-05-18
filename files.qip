@@ -1,0 +1,4 @@
+set_global_assignment -name VERILOG_FILE rtl/Generator.v
+set_global_assignment -name SYSTEMVERILOG_FILE rtl/Odyssey.v
+set_global_assignment -name SDC_FILE Odyssey.sdc
+set_global_assignment -name SYSTEMVERILOG_FILE Odyssey.sv
