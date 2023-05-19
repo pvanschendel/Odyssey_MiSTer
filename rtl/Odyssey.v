@@ -166,6 +166,16 @@ module Odyssey(
 	input         pal,
 	input         scandouble,
 
+	input signed [7:0] Analog1XP1,
+	input signed [7:0] Analog1YP1,
+	input signed [7:0] Analog2XP1,
+	input signed [7:0] Analog2YP1,
+
+	input signed [7:0] Analog1XP2,
+	input signed [7:0] Analog1YP2,
+	input signed [7:0] Analog2XP2,
+	input signed [7:0] Analog2YP2,
+
 	output reg    ce_pix,
 
 	output reg    HBlank,
@@ -288,7 +298,7 @@ Generator PLAYER_1 (
 	.clk(clk),
 	.reset(reset),
 
-	.P9_HORIZ_POS(20),
+	.P9_HORIZ_POS(Analog1XP1+128),
 	.P10_HORIZ(hc),
 	.P6_ENABLE(1),
 	.P1_VERT(vc),
@@ -297,7 +307,7 @@ Generator PLAYER_1 (
 
 	.P7_WIDTH(player_width),
 	.P8_ENABLE_OUT(1),
-	.P2_VERT_POS(150),
+	.P2_VERT_POS(Analog1YP1+128),
 
 	.P5_OUT(player_1_out)
 );
@@ -307,7 +317,7 @@ Generator PLAYER_2 (
 	.clk(clk),
 	.reset(reset),
 
-	.P9_HORIZ_POS(h_pixel_count - player_width -20),
+	.P9_HORIZ_POS(Analog1XP2+128),
 	.P10_HORIZ(hc),
 	.P6_ENABLE(1),
 	.P1_VERT(vc),
@@ -316,7 +326,7 @@ Generator PLAYER_2 (
 
 	.P7_WIDTH(player_width),
 	.P8_ENABLE_OUT(1),
-	.P2_VERT_POS(150),
+	.P2_VERT_POS(Analog1YP2+128),
 
 	.P5_OUT(player_2_out)
 );

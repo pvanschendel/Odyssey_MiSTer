@@ -238,6 +238,11 @@ wire forced_scandoubler;
 wire   [1:0] buttons;
 wire [127:0] status;
 wire  [10:0] ps2_key;
+wire [15:0] joystick_analog_l0;
+wire [15:0] joystick_analog_r0;
+wire [15:0] joystick_analog_l1;
+wire [15:0] joystick_analog_r1;
+
 
 hps_io #(.CONF_STR(CONF_STR)) hps_io
 (
@@ -252,6 +257,10 @@ hps_io #(.CONF_STR(CONF_STR)) hps_io
 	.status(status),
 	.status_menumask({status[5]}),
 
+	.joystick_l_analog_0(joystick_analog_l0),
+	.joystick_r_analog_0(joystick_analog_r0),
+	.joystick_l_analog_1(joystick_analog_l1),
+	.joystick_r_analog_1(joystick_analog_r1),
 	.ps2_key(ps2_key)
 );
 
@@ -283,6 +292,16 @@ Odyssey Odyssey
 
 	.pal(status[2]),
 	.scandouble(forced_scandoubler),
+
+	.Analog1XP1(joystick_analog_l0[7:0]),
+	.Analog1YP1(joystick_analog_l0[15:8]),
+	.Analog2XP1(joystick_analog_r0[7:0]),
+	.Analog2YP1(joystick_analog_r0[15:8]),
+
+	.Analog1XP2(joystick_analog_l1[7:0]),
+	.Analog1YP2(joystick_analog_l1[15:8]),
+	.Analog2XP2(joystick_analog_r1[7:0]),
+	.Analog2YP2(joystick_analog_r1[15:8]),
 
 	.ce_pix(ce_pix),
 
