@@ -179,6 +179,8 @@ module Odyssey(
 // h and v generators copied from template core, will do for now.
 // I do not think the Odyssey actually blanks
 
+localparam h_pixel_count = 530;
+
 // HORIZ SYNC GENERATOR
 reg   [9:0] hc;
 always @(posedge clk) begin
@@ -196,7 +198,7 @@ always @(posedge clk) begin
 		end
 	end
 
-	if (hc == 529) HBlank <= 1;
+	if (hc == (h_pixel_count - 1)) HBlank <= 1;
 	else if (hc == 0) HBlank <= 0;
 
 	if (hc == 544) HSync <= 1;
@@ -237,25 +239,91 @@ always @(posedge clk) begin
 	end
 end
 
+
+localparam player_width = 30;
+localparam player_height = 20;
+localparam wall_ball_width = player_width / 2;
+localparam ball_height = player_height/2;
+
+wire ball_out;
+Generator BALL (
+	.clk(clk),
+	.reset(reset),
+
+	.P9_HORIZ_POS(35),
+	.P10_HORIZ(hc),
+	.P6_ENABLE(1),
+	.P1_VERT(vc),
+
+	.P4_HEIGHT(ball_height),
+
+	.P7_WIDTH(wall_ball_width),
+	.P8_ENABLE_OUT(1),
+	.P2_VERT_POS(100),
+
+	.P5_OUT(ball_out)
+);
+
 wire wall_out;
 Generator WALL (
 	.clk(clk),
 	.reset(reset),
 
-	.P9_HORIZ_POS(100),
+	.P9_HORIZ_POS((h_pixel_count - wall_ball_width)/2),
 	.P10_HORIZ(hc),
 	.P6_ENABLE(1),
 	.P1_VERT(vc),
 
 	.P4_HEIGHT(300),
 
-	.P7_WIDTH(10),
+	.P7_WIDTH(wall_ball_width),
 	.P8_ENABLE_OUT(1),
 	.P2_VERT_POS(0), // 130 kOhm to ground
 
 	.P5_OUT(wall_out)
 );
 
-assign video = wall_out ? 128 : 0;
+wire player_1_out;
+Generator PLAYER_1 (
+	.clk(clk),
+	.reset(reset),
+
+	.P9_HORIZ_POS(20),
+	.P10_HORIZ(hc),
+	.P6_ENABLE(1),
+	.P1_VERT(vc),
+
+	.P4_HEIGHT(player_height),
+
+	.P7_WIDTH(player_width),
+	.P8_ENABLE_OUT(1),
+	.P2_VERT_POS(150),
+
+	.P5_OUT(player_1_out)
+);
+
+wire player_2_out;
+Generator PLAYER_2 (
+	.clk(clk),
+	.reset(reset),
+
+	.P9_HORIZ_POS(h_pixel_count - player_width -20),
+	.P10_HORIZ(hc),
+	.P6_ENABLE(1),
+	.P1_VERT(vc),
+
+	.P4_HEIGHT(player_height),
+
+	.P7_WIDTH(player_width),
+	.P8_ENABLE_OUT(1),
+	.P2_VERT_POS(150),
+
+	.P5_OUT(player_2_out)
+);
+
+assign video =
+	HBlank ? 0 :
+	(ball_out || wall_out || player_1_out || player_2_out) ? 200 :
+	10;
 
 endmodule
