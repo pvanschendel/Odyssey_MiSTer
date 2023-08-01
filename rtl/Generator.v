@@ -7,8 +7,8 @@ module Generator
 	input         clk,
 	input         reset,
 
-	input         [9:0] P10_HORIZ,
-	input         [9:0] P9_HORIZ_POS,
+	input         [10:0] P10_HORIZ,
+	input         [10:0] P9_HORIZ_POS,
 	input         [9:0] P7_WIDTH,
 	input         [9:0] P1_VERT,
 	input         [9:0] P2_VERT_POS,

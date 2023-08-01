@@ -160,7 +160,7 @@
 //  7 : ENGL_CONTROL 1.0 ... 4.8 V
 
 module Odyssey(
-	input         clk,
+	input         clk,              ///< 20 MHz
 	input         reset,
 
 	input         pal,
@@ -175,8 +175,6 @@ module Odyssey(
 	input signed [7:0] Analog2XP2,
 	input signed [7:0] Analog2YP2,
 
-	output reg    ce_pix,
-
 	output reg    HBlank,
 	output reg    HSync,
 	output reg    VBlank,
@@ -188,48 +186,64 @@ module Odyssey(
 // h and v generators copied from template core, will do for now.
 // I do not think the Odyssey actually blanks
 
-localparam h_pixel_count = 530;
+localparam h_non_blank_count = 1060;
+
+// NTSC:
+// 525 scan lines * frame rate 30 Hz -> 15750 Hz
+
+// line frequency
+// 20 MHz / 15750 Hz = 1269
 
 // HORIZ SYNC GENERATOR
-reg   [9:0] hc;
+// Produces 15734 Hz pulses
+// See: https://en.wikipedia.org/wiki/Multivibrator
+//
+// t_1 = 0.69 * C1 * (R2 + R22//TM2 + R38) = 42 us
+// t_2 = 0.69 * C2 * R5 = 141 us
+// C1 = 470pF, R2 = 150k, R22 = 3k9, R38 = 0 - 50k
+// C2 = 680pF, R5 = 300k
+reg   [9:0] hc; // 0.3 (- 5.6?) V
 always @(posedge clk) begin
-	ce_pix <= ~ce_pix;
-
 	if(reset) begin
 		hc <= 0;
 	end
-	else if(ce_pix) begin
-		if(hc >= 637) begin
+	else begin
+		if(hc >= 1269) begin
 			hc <= 0;
 		end else begin
 			hc <= hc + 1'd1;
 		end
 	end
 
-	if (hc == (h_pixel_count - 1)) HBlank <= 1;
+	if (hc == (h_non_blank_count - 1)) HBlank <= 1;
 	else if (hc == 0) HBlank <= 0;
 
-	if (hc == 544) HSync <= 1;
-	else if (hc == 590) HSync <= 0;
+	if (hc == 1089) HSync <= 1;
+	else if (hc == 1181) HSync <= 0;
 end
 
 // VERT SYNC GENERATOR
-reg   [9:0] vc;
+// Produces 60 Hz pulses
+// t_1 = 0.69 * C1 * (R2 + R23//TM1 + R39) = 17 ms
+// t_2 = 0.69 * C2 * R5 = 21 ms
+// C1 = 100nF, R2 = 180k, R23 = 27k, R39 = 0 - 100k
+// C2 = 100nF, R5 = 300k
+// to get 30Hz -> 33ms period we need R2 + R23//TM1 + R39 = 174k
+// seems not possible, probably factor 0.69 is wrong
+reg   [9:0] vc; // 0.1 (- 5.6?) V
 always @(posedge clk) begin
 	if(reset) begin
 		vc <= 0;
 	end
-	else if(ce_pix) begin
-		if(hc >= 637) begin
-			if(vc >= (pal ? 311 :261)) begin
-				vc <= 0;
-			end else begin
-				vc <= vc + 1'd1;
-			end
+	else if(hc >= 1277) begin
+		if(vc >= (pal ? 311 :261)) begin
+			vc <= 0;
+		end else begin
+			vc <= vc + 1'd1;
 		end
 	end
 
-	if (hc == 544) begin
+	if (hc == 1089) begin
 		if(pal) begin
 			if(vc == 304) VSync <= 1;
 			else if (vc == 308) VSync <= 0;
@@ -248,17 +262,17 @@ always @(posedge clk) begin
 end
 
 
-localparam player_width = 30;
+localparam player_width = 60;
 localparam player_height = 20;
 localparam wall_ball_width = player_width / 2;
-localparam ball_height = player_height/2;
+localparam ball_height = player_height/2;  // 0.7V
 
 wire ball_out;
 Generator BALL (
 	.clk(clk),
 	.reset(reset),
 
-	.P9_HORIZ_POS(35),
+	.P9_HORIZ_POS(70), // 1.5 - 4.5V
 	.P10_HORIZ(hc),
 	.P6_ENABLE(1),
 	.P1_VERT(vc),
@@ -277,16 +291,16 @@ Generator WALL (
 	.clk(clk),
 	.reset(reset),
 
-	.P9_HORIZ_POS((h_pixel_count - wall_ball_width)/2),
+	.P9_HORIZ_POS((h_non_blank_count - wall_ball_width)/2), // 2.8V
 	.P10_HORIZ(hc),
 	.P6_ENABLE(1),
 	.P1_VERT(vc),
 
-	.P4_HEIGHT(300),
+	.P4_HEIGHT(300), // -0.9V ?  120 kOhm to CARD_P10
 
 	.P7_WIDTH(wall_ball_width),
 	.P8_ENABLE_OUT(1),
-	.P2_VERT_POS(0), // 130 kOhm to ground
+	.P2_VERT_POS(0), // 2.7V ?  130 kOhm GND
 
 	.P5_OUT(wall_out)
 );
@@ -296,16 +310,16 @@ Generator PLAYER_1 (
 	.clk(clk),
 	.reset(reset),
 
-	.P9_HORIZ_POS(Analog1XP1+128),
-	.P10_HORIZ(hc),
+	.P9_HORIZ_POS((Analog1XP1+128)*2), // 1.8 - 3.6V
+	.P10_HORIZ(hc),  // 0.3V
 	.P6_ENABLE(1),
-	.P1_VERT(vc),
+	.P1_VERT(vc),  // 0.1V
 
 	.P4_HEIGHT(player_height),
 
 	.P7_WIDTH(player_width),
 	.P8_ENABLE_OUT(1),
-	.P2_VERT_POS(Analog1YP1+128),
+	.P2_VERT_POS(Analog1YP1+128), // 3.2V (2V - 4V)
 
 	.P5_OUT(player_1_out)
 );
@@ -315,7 +329,7 @@ Generator PLAYER_2 (
 	.clk(clk),
 	.reset(reset),
 
-	.P9_HORIZ_POS(Analog1XP2+128),
+	.P9_HORIZ_POS((Analog1XP2+128)*2), // 3.6 V  (1.8 - 3.6V)
 	.P10_HORIZ(hc),
 	.P6_ENABLE(1),
 	.P1_VERT(vc),

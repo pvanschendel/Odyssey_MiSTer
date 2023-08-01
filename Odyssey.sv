@@ -282,7 +282,6 @@ wire HBlank;
 wire HSync;
 wire VBlank;
 wire VSync;
-wire ce_pix;
 wire [7:0] video;
 
 Odyssey Odyssey
@@ -302,8 +301,6 @@ Odyssey Odyssey
 	.Analog2XP2(joystick_analog_r1[7:0]),
 	.Analog2YP2(joystick_analog_r1[15:8]),
 
-	.ce_pix(ce_pix),
-
 	.HBlank(HBlank),
 	.HSync(HSync),
 	.VBlank(VBlank),
@@ -313,7 +310,7 @@ Odyssey Odyssey
 );
 
 assign CLK_VIDEO = clk_sys;
-assign CE_PIXEL = ce_pix;
+assign CE_PIXEL = 1;
 
 assign VGA_DE = ~(HBlank | VBlank);
 assign VGA_HS = HSync;
