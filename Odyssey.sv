@@ -291,7 +291,6 @@ Odyssey Odyssey
 	.reset(reset),
 
 	.pal(status[2]),
-	.scandouble(forced_scandoubler),
 
 	.Analog1XP1(joystick_analog_l0[7:0]),
 	.Analog1YP1(joystick_analog_l0[15:8]),

@@ -164,7 +164,6 @@ module Odyssey(
 	input         reset,
 
 	input         pal,
-	input         scandouble,
 
 	input signed [7:0] Analog1XP1,
 	input signed [7:0] Analog1YP1,
@@ -194,8 +193,7 @@ localparam h_pixel_count = 530;
 // HORIZ SYNC GENERATOR
 reg   [9:0] hc;
 always @(posedge clk) begin
-	if(scandouble) ce_pix <= 1;
-		else ce_pix <= ~ce_pix;
+	ce_pix <= ~ce_pix;
 
 	if(reset) begin
 		hc <= 0;
@@ -223,7 +221,7 @@ always @(posedge clk) begin
 	end
 	else if(ce_pix) begin
 		if(hc >= 637) begin
-			if(vc >= (pal ? (scandouble ? 623 : 311) : (scandouble ? 523 : 261))) begin
+			if(vc >= (pal ? 311 :261)) begin
 				vc <= 0;
 			end else begin
 				vc <= vc + 1'd1;
@@ -233,17 +231,17 @@ always @(posedge clk) begin
 
 	if (hc == 544) begin
 		if(pal) begin
-			if(vc == (scandouble ? 609 : 304)) VSync <= 1;
-			else if (vc == (scandouble ? 617 : 308)) VSync <= 0;
+			if(vc == 304) VSync <= 1;
+			else if (vc == 308) VSync <= 0;
 
-			if(vc == (scandouble ? 601 : 300)) VBlank <= 1;
+			if(vc == 300) VBlank <= 1;
 			else if (vc == 0) VBlank <= 0;
 		end
 		else begin
-			if(vc == (scandouble ? 490 : 245)) VSync <= 1;
-			else if (vc == (scandouble ? 496 : 248)) VSync <= 0;
+			if(vc == 245) VSync <= 1;
+			else if (vc == 248) VSync <= 0;
 
-			if(vc == (scandouble ? 480 : 240)) VBlank <= 1;
+			if(vc == 240) VBlank <= 1;
 			else if (vc == 0) VBlank <= 0;
 		end
 	end
