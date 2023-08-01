@@ -271,16 +271,14 @@ pll pll
 (
 	.refclk(CLK_50M),
 	.rst(0),
-	.outclk_0(clk_sys)
+	.outclk_0(clk_sys) // 20 MHz
 );
 
 wire reset = RESET | status[0] | buttons[1];
 
 wire [1:0] col = status[4:3];
 
-wire HBlank;
 wire HSync;
-wire VBlank;
 wire VSync;
 wire [7:0] video;
 
@@ -301,9 +299,7 @@ Odyssey Odyssey
 	.Analog2XP2(joystick_analog_r1[7:0]),
 	.Analog2YP2(joystick_analog_r1[15:8]),
 
-	.HBlank(HBlank),
 	.HSync(HSync),
-	.VBlank(VBlank),
 	.VSync(VSync),
 
 	.video(video)
@@ -311,6 +307,29 @@ Odyssey Odyssey
 
 assign CLK_VIDEO = clk_sys;
 assign CE_PIXEL = 1;
+
+reg HBlank, VBlank;
+always @(posedge CLK_VIDEO) begin
+	reg [11:0] hcnt, vcnt;
+	reg old_hs, old_vs;
+
+	hcnt <= hcnt + 1'd1;
+	old_hs <= HSync;
+	if(old_hs & ~HSync) begin
+		hcnt <= 0;
+
+		vcnt <= vcnt + 1'd1;
+		old_vs <= VSync;
+		if(old_vs & ~VSync) vcnt <= 0;
+	end
+
+	// hcnt period is 1270
+	if (hcnt == 88)   HBlank <= 0;
+	if (hcnt == 1147) HBlank <= 1;
+
+	if (vcnt == 34)  VBlank <= 0;
+	if (vcnt == 240) VBlank <= 1;
+end
 
 assign VGA_DE = ~(HBlank | VBlank);
 assign VGA_HS = HSync;

@@ -175,9 +175,7 @@ module Odyssey(
 	input signed [7:0] Analog2XP2,
 	input signed [7:0] Analog2YP2,
 
-	output reg    HBlank,
 	output reg    HSync,
-	output reg    VBlank,
 	output reg    VSync,
 
 	output  [7:0] video
@@ -215,9 +213,6 @@ always @(posedge clk) begin
 		end
 	end
 
-	if (hc == (h_non_blank_count - 1)) HBlank <= 1;
-	else if (hc == 0) HBlank <= 0;
-
 	if (hc == 1089) HSync <= 1;
 	else if (hc == 1181) HSync <= 0;
 end
@@ -236,7 +231,7 @@ always @(posedge clk) begin
 		vc <= 0;
 	end
 	else if(hc >= 1277) begin
-		if(vc >= (pal ? 311 :261)) begin
+		if(vc >= (pal ? 311 : 261)) begin
 			vc <= 0;
 		end else begin
 			vc <= vc + 1'd1;
@@ -247,16 +242,10 @@ always @(posedge clk) begin
 		if(pal) begin
 			if(vc == 304) VSync <= 1;
 			else if (vc == 308) VSync <= 0;
-
-			if(vc == 300) VBlank <= 1;
-			else if (vc == 0) VBlank <= 0;
 		end
 		else begin
 			if(vc == 245) VSync <= 1;
 			else if (vc == 248) VSync <= 0;
-
-			if(vc == 240) VBlank <= 1;
-			else if (vc == 0) VBlank <= 0;
 		end
 	end
 end
@@ -344,8 +333,7 @@ Generator PLAYER_2 (
 );
 
 assign video =
-	HBlank ? 0 :
-	(ball_out || wall_out || player_1_out || player_2_out) ? 200 :
-	10;
+	(ball_out || wall_out || player_1_out || player_2_out) ? 8'd200 :
+	8'd10;
 
 endmodule
