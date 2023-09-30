@@ -207,15 +207,15 @@ always @(posedge clk) begin
 	if(reset) begin
 		hc <= 0;
 	end else begin
-		if(hc < h_count_period - 1) begin
-			hc <= hc + 1'd1;
-		end else begin
+		hc <= hc + 1'd1;
+		if (hc == hsync_start) begin
+			HSync <= 1;
+		end else if (hc == hsync_start + hsync_count) begin
+			HSync <= 0;
+		end else if(hc >= h_count_period - 1) begin
 			hc <= 0;
 		end
 	end
-
-	if (hc == hsync_start) HSync <= 1;
-	else if (hc == hsync_start + hsync_count) HSync <= 0;
 end
 
 // VERT SYNC GENERATOR
@@ -239,14 +239,11 @@ always @(posedge clk) begin
 		vc <= 0;
 	end
 	else if(hc == h_count_period - 1) begin
-		if(vc < v_count_period - 1) begin
-			vc <= vc + 1'd1;
-		end else begin
+		vc <= vc + 1'd1;
+		if (vc >= v_count_period - 1) begin
 			vc <= 0;
 		end
-	end
-
-	if (hc == hsync_start) begin
+	end else if (hc == hsync_start) begin
 		if(vc == vsync_start) VSync <= 1;
 		else if (vc == (vsync_start + vsync_count)) VSync <= 0;
 	end
