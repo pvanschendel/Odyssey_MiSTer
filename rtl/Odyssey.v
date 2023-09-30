@@ -159,11 +159,11 @@
 //  6 : ENGL_T
 //  7 : ENGL_CONTROL 1.0 ... 4.8 V
 
-module Odyssey(
+module Odyssey #(
+	parameter     CLK_SYS_FREQUENCY
+) (
 	input         clk,              ///< 20 MHz
 	input         reset,
-
-	input         pal,
 
 	input signed [7:0] Analog1XP1,
 	input signed [7:0] Analog1YP1,
@@ -181,16 +181,11 @@ module Odyssey(
 	output  [7:0] video
 );
 
-// h and v generators copied from template core, will do for now.
-// I do not think the Odyssey actually blanks
-
-localparam h_non_blank_count = 1060;
-
-// NTSC:
-// 525 scan lines * frame rate 30 Hz -> 15750 Hz
-
-// line frequency
-// 20 MHz / 15750 Hz = 1269
+// NTSC black and white (not sure if color or bw target frequencies were used in the design)
+localparam v_frequency = 60.0; // [Hz] (half) frames per second
+localparam h_frequency = v_frequency * 262.5; // [Hz] lines per second
+localparam hsync_duration = 4.6e-06; // [s]
+localparam vsync_duration = 190e-6; // [s]
 
 // HORIZ SYNC GENERATOR
 // Produces 15734 Hz pulses
@@ -200,21 +195,27 @@ localparam h_non_blank_count = 1060;
 // t_2 = 0.69 * C2 * R5 = 141 us
 // C1 = 470pF, R2 = 150k, R22 = 3k9, R38 = 0 - 50k
 // C2 = 680pF, R5 = 300k
-reg   [9:0] hc; // 0.3 (- 5.6?) V
+
+// For now, ignoring the above comments, and just generate pulses from the spec:
+localparam int h_count_period = CLK_SYS_FREQUENCY / h_frequency;
+localparam int hsync_start = h_count_period - 9e-06 * CLK_SYS_FREQUENCY;
+localparam int hsync_count = hsync_duration * CLK_SYS_FREQUENCY;
+
+localparam int hc_bitwidth = $clog2(h_count_period);
+reg   [hc_bitwidth-1:0] hc; // 0.3 (- 5.6?) V
 always @(posedge clk) begin
 	if(reset) begin
 		hc <= 0;
-	end
-	else begin
-		if(hc >= 1269) begin
-			hc <= 0;
-		end else begin
+	end else begin
+		if(hc < h_count_period - 1) begin
 			hc <= hc + 1'd1;
+		end else begin
+			hc <= 0;
 		end
 	end
 
-	if (hc == 1089) HSync <= 1;
-	else if (hc == 1181) HSync <= 0;
+	if (hc == hsync_start) HSync <= 1;
+	else if (hc == hsync_start + hsync_count) HSync <= 0;
 end
 
 // VERT SYNC GENERATOR
@@ -225,109 +226,128 @@ end
 // C2 = 100nF, R5 = 300k
 // to get 30Hz -> 33ms period we need R2 + R23//TM1 + R39 = 174k
 // seems not possible, probably factor 0.69 is wrong
-reg   [9:0] vc; // 0.1 (- 5.6?) V
+
+// For now, ignoring the above comments, and just generate pulses from the spec:
+localparam int v_count_period = h_frequency / v_frequency; // Due to the way we generate the sync, this looses the half extra needed for interlacing as per NTSC spec.
+localparam int vsync_count = vsync_duration * h_frequency;
+localparam int vsync_start = v_count_period - 1.06e-3 * h_frequency;
+
+localparam int vc_bitwidth = $clog2(v_count_period);
+reg   [vc_bitwidth-1:0] vc; // 0.1 (- 5.6?) V
 always @(posedge clk) begin
 	if(reset) begin
 		vc <= 0;
 	end
-	else if(hc >= 1277) begin
-		if(vc >= (pal ? 311 : 261)) begin
-			vc <= 0;
-		end else begin
+	else if(hc == h_count_period - 1) begin
+		if(vc < v_count_period - 1) begin
 			vc <= vc + 1'd1;
+		end else begin
+			vc <= 0;
 		end
 	end
 
-	if (hc == 1089) begin
-		if(pal) begin
-			if(vc == 304) VSync <= 1;
-			else if (vc == 308) VSync <= 0;
-		end
-		else begin
-			if(vc == 245) VSync <= 1;
-			else if (vc == 248) VSync <= 0;
-		end
+	if (hc == hsync_start) begin
+		if(vc == vsync_start) VSync <= 1;
+		else if (vc == (vsync_start + vsync_count)) VSync <= 0;
 	end
 end
 
 
-localparam player_width = 60;
-localparam player_height = 20;
-localparam wall_ball_width = player_width / 2;
-localparam ball_height = player_height/2;  // 0.7V
+localparam int player_width = 0.0473 * h_count_period;
+localparam int player_height = 0.0763 * v_count_period;
+
+localparam int ball_h_pos = 0.0552 * h_count_period;
+localparam int wall_ball_width = player_width / 2;
+localparam int ball_v_pos = 0.382 * v_count_period;
+localparam int ball_height = player_height/2; // 0.7V
 
 wire ball_out;
-Generator BALL (
+Generator #(
+	.h_bitwidth(hc_bitwidth),
+	.v_bitwidth(vc_bitwidth)
+) BALL (
 	.clk(clk),
 	.reset(reset),
 
-	.P9_HORIZ_POS(70), // 1.5 - 4.5V
-	.P10_HORIZ(hc),
 	.P6_ENABLE(1),
-	.P1_VERT(vc),
-
-	.P4_HEIGHT(ball_height),
-
-	.P7_WIDTH(wall_ball_width),
 	.P8_ENABLE_OUT(1),
-	.P2_VERT_POS(100),
+
+	.P10_HORIZ(hc),
+	.P9_HORIZ_POS(ball_h_pos), // 1.5 - 4.5V
+	.P7_WIDTH(wall_ball_width),
+
+	.P1_VERT(vc),
+	.P2_VERT_POS(ball_v_pos),
+	.P4_HEIGHT(ball_height),
 
 	.P5_OUT(ball_out)
 );
 
+localparam int wall_h_pos = ((1 - 0.165) * h_count_period - wall_ball_width)/2;
+localparam int wall_height = v_count_period;
+
 wire wall_out;
-Generator WALL (
+Generator #(
+	.h_bitwidth(hc_bitwidth),
+	.v_bitwidth(vc_bitwidth)
+) WALL (
 	.clk(clk),
 	.reset(reset),
 
-	.P9_HORIZ_POS((h_non_blank_count - wall_ball_width)/2), // 2.8V
-	.P10_HORIZ(hc),
 	.P6_ENABLE(1),
-	.P1_VERT(vc),
-
-	.P4_HEIGHT(300), // -0.9V ?  120 kOhm to CARD_P10
-
-	.P7_WIDTH(wall_ball_width),
 	.P8_ENABLE_OUT(1),
+
+	.P10_HORIZ(hc),
+	.P9_HORIZ_POS(wall_h_pos), // 2.8V
+	.P7_WIDTH(wall_ball_width),
+
+	.P1_VERT(vc),
 	.P2_VERT_POS(0), // 2.7V ?  130 kOhm GND
+	.P4_HEIGHT(wall_height), // -0.9V ?  120 kOhm to CARD_P10
 
 	.P5_OUT(wall_out)
 );
 
 wire player_1_out;
-Generator PLAYER_1 (
+Generator #(
+	.h_bitwidth(hc_bitwidth),
+	.v_bitwidth(vc_bitwidth)
+) PLAYER_1 (
 	.clk(clk),
 	.reset(reset),
 
-	.P9_HORIZ_POS((Analog1XP1+128)*2), // 1.8 - 3.6V
-	.P10_HORIZ(hc),  // 0.3V
 	.P6_ENABLE(1),
-	.P1_VERT(vc),  // 0.1V
-
-	.P4_HEIGHT(player_height),
-
-	.P7_WIDTH(player_width),
 	.P8_ENABLE_OUT(1),
-	.P2_VERT_POS(Analog1YP1+128), // 3.2V (2V - 4V)
+
+	.P10_HORIZ(hc),  // 0.3V
+	.P9_HORIZ_POS((Analog1XP1+128) * (h_count_period/256)), // 1.8 - 3.6V
+	.P7_WIDTH(player_width),
+
+	.P1_VERT(vc),  // 0.1V
+	.P2_VERT_POS((Analog1YP1+128) * (v_count_period/256)), // 3.2V (2V - 4V)
+	.P4_HEIGHT(player_height),
 
 	.P5_OUT(player_1_out)
 );
 
 wire player_2_out;
-Generator PLAYER_2 (
+Generator #(
+	.h_bitwidth(hc_bitwidth),
+	.v_bitwidth(vc_bitwidth)
+) PLAYER_2 (
 	.clk(clk),
 	.reset(reset),
 
-	.P9_HORIZ_POS((Analog1XP2+128)*2), // 3.6 V  (1.8 - 3.6V)
-	.P10_HORIZ(hc),
 	.P6_ENABLE(1),
-	.P1_VERT(vc),
-
-	.P4_HEIGHT(player_height),
-
-	.P7_WIDTH(player_width),
 	.P8_ENABLE_OUT(1),
-	.P2_VERT_POS(Analog1YP2+128),
+
+	.P10_HORIZ(hc),
+	.P9_HORIZ_POS((Analog1XP2+128) * (h_count_period/256)), // 3.6 V  (1.8 - 3.6V)
+	.P7_WIDTH(player_width),
+
+	.P1_VERT(vc),
+	.P2_VERT_POS((Analog1YP2+128) * (v_count_period/256)),
+	.P4_HEIGHT(player_height),
 
 	.P5_OUT(player_2_out)
 );

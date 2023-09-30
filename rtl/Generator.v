@@ -2,17 +2,20 @@
 // http://www.pong-story.com/1tl200blak_sch.pdf
 
 
-module Generator
+module Generator #(
+	parameter     h_bitwidth,
+	parameter     v_bitwidth
+)
 (
 	input         clk,
 	input         reset,
 
-	input         [10:0] P10_HORIZ,
-	input         [10:0] P9_HORIZ_POS,
-	input         [9:0] P7_WIDTH,
-	input         [9:0] P1_VERT,
-	input         [9:0] P2_VERT_POS,
-	input         [9:0] P4_HEIGHT,
+	input         [h_bitwidth-1:0] P10_HORIZ,
+	input         [h_bitwidth-1:0] P9_HORIZ_POS,
+	input         [h_bitwidth-1:0] P7_WIDTH,
+	input         [v_bitwidth-1:0] P1_VERT,
+	input         [v_bitwidth-1:0] P2_VERT_POS,
+	input         [v_bitwidth-1:0] P4_HEIGHT,
 	input         P6_ENABLE,
 	input         P8_ENABLE_OUT,
 

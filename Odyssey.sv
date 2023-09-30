@@ -207,7 +207,6 @@ localparam CONF_STR = {
 	"Odyssey;;",
 	"-;",
 	"O[122:121],Aspect ratio,Original,Full Screen,[ARC1],[ARC2];",
-	"O[2],TV Mode,NTSC,PAL;",
 	"O[4:3],Noise,White,Red,Green,Blue;",
 	"-;",
 	"P1,Test Page 1;",
@@ -271,8 +270,9 @@ pll pll
 (
 	.refclk(CLK_50M),
 	.rst(0),
-	.outclk_0(clk_sys) // 20 MHz
+	.outclk_0(clk_sys)
 );
+parameter clk_sys_frequency = 20e6; // [Hz]
 
 wire reset = RESET | status[0] | buttons[1];
 
@@ -282,12 +282,10 @@ wire HSync;
 wire VSync;
 wire [7:0] video;
 
-Odyssey Odyssey
+Odyssey #(clk_sys_frequency) Odyssey
 (
 	.clk(clk_sys),
 	.reset(reset),
-
-	.pal(status[2]),
 
 	.Analog1XP1(joystick_analog_l0[7:0]),
 	.Analog1YP1(joystick_analog_l0[15:8]),
