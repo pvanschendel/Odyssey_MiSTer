@@ -45,7 +45,7 @@ module emu
 	output  [7:0] VGA_B,
 	output        VGA_HS,
 	output        VGA_VS,
-	output        VGA_DE,    // = ~(VBlank | HBlank)
+	output        VGA_DE,
 	output        VGA_F1,
 	output [1:0]  VGA_SL,
 	output        VGA_SCALER, // Force VGA scaler
@@ -306,30 +306,7 @@ Odyssey #(clk_sys_frequency) Odyssey
 assign CLK_VIDEO = clk_sys;
 assign CE_PIXEL = 1;
 
-reg HBlank, VBlank;
-always @(posedge CLK_VIDEO) begin
-	reg [11:0] hcnt, vcnt;
-	reg old_hs, old_vs;
-
-	hcnt <= hcnt + 1'd1;
-	old_hs <= HSync;
-	if(old_hs & ~HSync) begin
-		hcnt <= 0;
-
-		vcnt <= vcnt + 1'd1;
-		old_vs <= VSync;
-		if(old_vs & ~VSync) vcnt <= 0;
-	end
-
-	// hcnt period is 1270
-	if (hcnt == 88)   HBlank <= 0;
-	if (hcnt == 1147) HBlank <= 1;
-
-	if (vcnt == 34)  VBlank <= 0;
-	if (vcnt == 240) VBlank <= 1;
-end
-
-assign VGA_DE = ~(HBlank | VBlank);
+assign VGA_DE = ~(HSync | VSync);
 assign VGA_HS = HSync;
 assign VGA_VS = VSync;
 assign VGA_G  = (!col || col == 2) ? video : 8'd0;
