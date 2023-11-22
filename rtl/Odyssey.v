@@ -184,8 +184,10 @@ module Odyssey #(
 // NTSC black and white (not sure if color or bw target frequencies were used in the design)
 localparam v_frequency = 60.0; // [Hz] (half) frames per second
 localparam h_frequency = v_frequency * 262.5; // [Hz] lines per second
-localparam hsync_duration = 4.6e-06; // [s]
-localparam vsync_duration = 190e-6; // [s]
+localparam hsync_duration = 4.7e-06; // [s]
+localparam vsync_duration = 3.0 / h_frequency; // [s]
+// front_porch = 1.5e-6
+// blank_duration = 10.9e-6
 
 // HORIZ SYNC GENERATOR
 // Produces 15734 Hz pulses
@@ -197,9 +199,8 @@ localparam vsync_duration = 190e-6; // [s]
 // C2 = 680pF, R5 = 300k
 
 // For now, ignoring the above comments, and just generate pulses from the spec:
-localparam int h_count_period = CLK_SYS_FREQUENCY / h_frequency;
-localparam int hsync_start = h_count_period - 9e-06 * CLK_SYS_FREQUENCY;
-localparam int hsync_count = hsync_duration * CLK_SYS_FREQUENCY;
+localparam int h_count_period = CLK_SYS_FREQUENCY / h_frequency + 0.5; // = 333333
+localparam int hsync_start = h_count_period - hsync_duration * CLK_SYS_FREQUENCY + 0.5;
 
 localparam int hc_bitwidth = $clog2(h_count_period);
 reg   [hc_bitwidth-1:0] hc; // 0.3 (- 5.6?) V
@@ -207,11 +208,13 @@ always @(posedge clk) begin
 	if(reset) begin
 		hc <= 0;
 	end else begin
-		hc <= (hc >= h_count_period - 1) ? 0 : hc + 1'd1;
-		if (hc == hsync_start) HSync <= 1;
-
-		else if (hc == hsync_start + hsync_count) HSync <= 0;
-
+		hc <= hc + 1'd1;
+		if (hc == hsync_start) begin
+			HSync <= 1;
+		end else if(hc >= h_count_period - 1) begin
+			HSync <= 0;
+			hc <= 0;
+		end
 	end
 end
 
@@ -225,9 +228,8 @@ end
 // seems not possible, probably factor 0.69 is wrong
 
 // For now, ignoring the above comments, and just generate pulses from the spec:
-localparam int v_count_period = CLK_SYS_FREQUENCY / v_frequency; // Due to the way we generate the sync, this looses the half extra needed for interlacing as per NTSC spec.
-localparam int vsync_count = vsync_duration * CLK_SYS_FREQUENCY;
-localparam int vsync_start = v_count_period - 1.06e-3 * CLK_SYS_FREQUENCY;
+localparam int v_count_period = CLK_SYS_FREQUENCY / v_frequency + 0.5; // = 1269; 333333 / 1269 = 262.67, so not exactly 262.5
+localparam int vsync_start = v_count_period - vsync_duration * CLK_SYS_FREQUENCY + 0.5;
 
 localparam int vc_bitwidth = $clog2(v_count_period);
 reg   [vc_bitwidth-1:0] vc; // 0.1 (- 5.6?) V
@@ -235,9 +237,13 @@ always @(posedge clk) begin
 	if (reset) begin
 		vc <= 0;
 	end else begin
-		vc <= (vc >= v_count_period - 1) ? 0 : vc + 1'd1;
-		if (vc == vsync_start) VSync <= 1;
-		else if (vc == (vsync_start + vsync_count)) VSync <= 0;
+		vc <= vc + 1'd1;
+		if (vc == vsync_start) begin
+			VSync <= 1;
+		end else if (vc >= v_count_period - 1) begin
+			VSync <= 0;
+			vc <= 0;
+		end
 	end
 end
 
