@@ -207,14 +207,11 @@ always @(posedge clk) begin
 	if(reset) begin
 		hc <= 0;
 	end else begin
-		hc <= hc + 1'd1;
-		if (hc == hsync_start) begin
-			HSync <= 1;
-		end else if (hc == hsync_start + hsync_count) begin
-			HSync <= 0;
-		end else if(hc >= h_count_period - 1) begin
-			hc <= 0;
-		end
+		hc <= (hc >= h_count_period - 1) ? 0 : hc + 1'd1;
+		if (hc == hsync_start) HSync <= 1;
+
+		else if (hc == hsync_start + hsync_count) HSync <= 0;
+
 	end
 end
 
@@ -228,23 +225,18 @@ end
 // seems not possible, probably factor 0.69 is wrong
 
 // For now, ignoring the above comments, and just generate pulses from the spec:
-localparam int v_count_period = h_frequency / v_frequency; // Due to the way we generate the sync, this looses the half extra needed for interlacing as per NTSC spec.
-localparam int vsync_count = vsync_duration * h_frequency;
-localparam int vsync_start = v_count_period - 1.06e-3 * h_frequency;
+localparam int v_count_period = CLK_SYS_FREQUENCY / v_frequency; // Due to the way we generate the sync, this looses the half extra needed for interlacing as per NTSC spec.
+localparam int vsync_count = vsync_duration * CLK_SYS_FREQUENCY;
+localparam int vsync_start = v_count_period - 1.06e-3 * CLK_SYS_FREQUENCY;
 
 localparam int vc_bitwidth = $clog2(v_count_period);
 reg   [vc_bitwidth-1:0] vc; // 0.1 (- 5.6?) V
 always @(posedge clk) begin
-	if(reset) begin
+	if (reset) begin
 		vc <= 0;
-	end
-	else if(hc == h_count_period - 1) begin
-		vc <= vc + 1'd1;
-		if (vc >= v_count_period - 1) begin
-			vc <= 0;
-		end
-	end else if (hc == hsync_start) begin
-		if(vc == vsync_start) VSync <= 1;
+	end else begin
+		vc <= (vc >= v_count_period - 1) ? 0 : vc + 1'd1;
+		if (vc == vsync_start) VSync <= 1;
 		else if (vc == (vsync_start + vsync_count)) VSync <= 0;
 	end
 end
