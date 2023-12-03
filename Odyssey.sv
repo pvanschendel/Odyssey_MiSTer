@@ -40,12 +40,12 @@ module emu
 	output [12:0] VIDEO_ARX,
 	output [12:0] VIDEO_ARY,
 
-	output  [7:0] VGA_R,
-	output  [7:0] VGA_G,
-	output  [7:0] VGA_B,
-	output        VGA_HS,
-	output        VGA_VS,
-	output        VGA_DE,
+	output  reg [7:0] VGA_R,
+	output  reg [7:0] VGA_G,
+	output  reg [7:0] VGA_B,
+	output  reg      VGA_HS,
+	output  reg      VGA_VS,
+	output  reg      VGA_DE,
 	output        VGA_F1,
 	output [1:0]  VGA_SL,
 	output        VGA_SCALER, // Force VGA scaler
@@ -303,12 +303,15 @@ Odyssey #(clk_sys_frequency) Odyssey
 assign CLK_VIDEO = clk_sys;
 assign CE_PIXEL = 1;
 
-assign VGA_DE = ~(HSync | VSync);
-assign VGA_HS = HSync;
-assign VGA_VS = VSync;
-assign VGA_G  = video;
-assign VGA_R  = video;
-assign VGA_B  = video;
+always @(posedge clk_sys) begin
+	VGA_DE <= ~(HSync | VSync);
+	VGA_HS <= HSync;
+	VGA_VS <= VSync;
+	VGA_G  <= video;
+	VGA_R  <= video;
+	VGA_B  <= video;
+end
+
 
 reg  [26:0] act_cnt;
 always @(posedge clk_sys) act_cnt <= act_cnt + 1'd1;
