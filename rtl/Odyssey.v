@@ -207,7 +207,7 @@ always @(posedge clk) begin
 	if(reset) begin
 		hc <= 0;
 	end else begin
-		hc <= (hc >= h_count_period - 1) ? 0 : hc + 1'd1;
+		hc <= (hc >= h_count_period - 1) ? 1'd0 : hc + 1'd1;
 		if (hc == hsync_start) HSync <= 1;
 
 		else if (hc == hsync_start + hsync_count) HSync <= 0;
@@ -235,7 +235,7 @@ always @(posedge clk) begin
 	if (reset) begin
 		vc <= 0;
 	end else begin
-		vc <= (vc >= v_count_period - 1) ? 0 : vc + 1'd1;
+		vc <= (vc >= v_count_period - 1) ? 1'd0 : vc + 1'd1;
 		if (vc == vsync_start) VSync <= 1;
 		else if (vc == (vsync_start + vsync_count)) VSync <= 0;
 	end
