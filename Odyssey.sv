@@ -207,7 +207,6 @@ localparam CONF_STR = {
 	"Odyssey;;",
 	"-;",
 	"O[122:121],Aspect ratio,Original,Full Screen,[ARC1],[ARC2];",
-	"O[4:3],Noise,White,Red,Green,Blue;",
 	"-;",
 	"P1,Test Page 1;",
 	"P1-;",
@@ -276,8 +275,6 @@ parameter clk_sys_frequency = 20e6; // [Hz]
 
 wire reset = RESET | status[0] | buttons[1];
 
-wire [1:0] col = status[4:3];
-
 wire HSync;
 wire VSync;
 wire [7:0] video;
@@ -309,9 +306,9 @@ assign CE_PIXEL = 1;
 assign VGA_DE = ~(HSync | VSync);
 assign VGA_HS = HSync;
 assign VGA_VS = VSync;
-assign VGA_G  = (!col || col == 2) ? video : 8'd0;
-assign VGA_R  = (!col || col == 1) ? video : 8'd0;
-assign VGA_B  = (!col || col == 3) ? video : 8'd0;
+assign VGA_G  = video;
+assign VGA_R  = video;
+assign VGA_B  = video;
 
 reg  [26:0] act_cnt;
 always @(posedge clk_sys) act_cnt <= act_cnt + 1'd1;
